@@ -1,0 +1,73 @@
+name = "edgecontext"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# ── KV Namespaces ──────────────────────────────────────────────────────────────
+# TENANTS: API-key hash → tenant config (auth + allowed upstreams + rate limit)
+# CACHE:   cached tool-call results, keyed by tenant + tool + hash(args)
+#
+# Create them with:
+#   wrangler kv namespace create TENANTS
+#   wrangler kv namespace create TENANTS --preview
+#   wrangler kv namespace create CACHE
+#   wrangler kv namespace create CACHE --preview
+# then paste the returned ids below.
+
+[[kv_namespaces]]
+binding = "TENANTS"
+id = "tenants_kn"
+preview_id = "tenants_kn_preview"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "cache_kn"
+preview_id = "cache_kn_preview"
+
+# ── R2 Bucket ───────────────────────────────────────────────────────────────────
+# LOGS: newline-delimited JSON, partitioned by date:
+#   logs/<YYYY-MM-DD>/<projectId>/<timestamp>-<rand>.jsonl
+#
+#   wrangler r2 bucket create edgecontext-logs
+#   wrangler r2 bucket create edgecontext-logs-preview
+
+[[r2_buckets]]
+binding = "LOGS"
+bucket_name = "edgecontext-logs"
+preview_bucket_name = "edgecontext-logs-preview"
+
+# ── Durable Objects ─────────────────────────────────────────────────────────────
+# SessionDO:     one instance per project_id — rolling session context, plus a
+#                log buffer flushed to R2 every 60 s by its alarm.
+# RateLimiterDO: one instance per tenant — sliding-window request counter.
+#                A Durable Object is used rather than KV because KV offers no
+#                atomic increment and is eventually consistent, which makes it
+#                unsound as a rate-limit counter.
+
+[[durable_objects.bindings]]
+name = "SESSION_DO"
+class_name = "SessionDO"
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER_DO"
+class_name = "RateLimiterDO"
+
+# Durable Object classes must be declared in a migration before first deploy.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionDO", "RateLimiterDO"]
+
+# ── Environment Variables ───────────────────────────────────────────────────────
+# UPSTREAM_MCP_SERVERS: JSON object mapping server name → upstream MCP URL. The
+#   name is what clients address as /mcp/<name>. A "default" entry is used when
+#   the client does not name a server.
+# DEFAULT_RATE_LIMIT:  requests per minute applied to tenants with no override.
+# CACHE_TTL_SECONDS:   default cache TTL. Note KV enforces a 60 s minimum.
+# CACHEABLE_TOOLS:     comma-separated tool names that may be cached. Append
+#   ":<seconds>" to give one tool its own TTL, e.g.
+#     "search_codebase:600,fetch_docs,list_files:120"
+
+[vars]
+DEFAULT_RATE_LIMIT = "60"
+CACHE_TTL_SECONDS = "300"
+CACHEABLE_TOOLS = ""
+UPSTREAM_MCP_SERVERS = "{}"

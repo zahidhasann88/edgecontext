@@ -1,0 +1,11 @@
+# Copy to .dev.vars for local development (`pnpm dev`). Gitignored.
+# These override the [vars] block in wrangler.toml.
+
+# Upstream MCP servers, as {name: url}. The name is the :serverName in /mcp/:serverName.
+UPSTREAM_MCP_SERVERS={"default":"http://127.0.0.1:8902/mcp"}
+
+# Tools that may be cached. Suffix ":<seconds>" for a per-tool TTL.
+CACHEABLE_TOOLS=search_codebase:600
+
+DEFAULT_RATE_LIMIT=60
+CACHE_TTL_SECONDS=300

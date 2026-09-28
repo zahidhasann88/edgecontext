@@ -1,0 +1,5 @@
+# pnpm needs to be told which native postinstall scripts are allowed to run.
+# `esbuild` and `workerd` are pulled in by wrangler and both require a build step.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
